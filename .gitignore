@@ -1,1 +1,5 @@
 /target
+/seq-output-images
+/mult-output-images
+/async-output-images
+/input-images
