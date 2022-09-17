@@ -10,20 +10,11 @@ type Result<T> = ::std::result::Result<T, Error>;
 fn generate_inputs() -> Result<()> {
     let image = Reader::open("assets/flowers_original.jpg")?.decode()?;
 
-    for n in 0..100 {
-        image.save(format!("input-images/flowers_{}.jpg", n))?;
+    for n in 0..5 {
+        image.save(format!("input-images/flowers-{}.jpg", n))?;
     }
 
     Ok(())
-}
-
-fn paths_as_string(paths: Vec<PathBuf>) -> Result<Vec<String>> {
-    let inputs = paths
-        .iter()
-        .map(|e| e.to_str().unwrap().to_string())
-        .collect::<Vec<_>>();
-
-    Ok(inputs)
 }
 
 fn get_inputs() -> Result<Vec<PathBuf>> {
@@ -36,12 +27,12 @@ fn get_inputs() -> Result<Vec<PathBuf>> {
     Ok(inputs)
 }
 
-fn process<F>(imagePath: &String, destination: &str, tag: &str, f: F) -> Result<()>
+fn process<F>(image_path: &PathBuf, destination: &str, tag: &str, f: F) -> Result<()>
 where
     F: Fn(DynamicImage) -> DynamicImage,
 {
-    let image = Reader::open(imagePath)?.decode()?;
-    let filename = imagePath.split("/").last().unwrap();
+    let image = Reader::open(image_path)?.decode()?;
+    let filename = image_path.file_name().unwrap().to_str().unwrap();
 
     let image = f(image);
 
@@ -52,7 +43,6 @@ where
 
 fn seq_process_images() -> Result<()> {
     let inputs = get_inputs()?;
-    let inputs = paths_as_string(inputs)?;
 
     inputs.iter().for_each(|path| {
         process(path, "seq-output-images", "gray", |image| image.grayscale()).unwrap()
@@ -63,7 +53,6 @@ fn seq_process_images() -> Result<()> {
 
 fn mult_process_images() -> Result<()> {
     let inputs = get_inputs()?;
-    let inputs = paths_as_string(inputs)?;
 
     inputs.par_iter().for_each(|path| {
         process(path, "mult-output-images", "gray", |image| image.grayscale()).unwrap()
