@@ -1,18 +1,20 @@
 use std::{fs, io, path::PathBuf};
 
 use image::{io::Reader, DynamicImage};
-use rayon::prelude::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 
 type Error = Box<dyn std::error::Error>;
 type Result<T> = ::std::result::Result<T, Error>;
 
-fn generate_inputs() -> Result<()> {
+fn generate_inputs(inputs: i32) -> Result<()> {
     let image = Reader::open("assets/flowers_original.jpg")?.decode()?;
 
-    for n in 0..5 {
-        image.save(format!("input-images/flowers-{}.jpg", n))?;
-    }
+    (0..inputs).into_par_iter().for_each(|n| {
+        image
+            .save(format!("input-images/flowers-{}.jpg", n))
+            .unwrap();
+    });
 
     Ok(())
 }
@@ -55,7 +57,10 @@ fn mult_process_images() -> Result<()> {
     let inputs = get_inputs()?;
 
     inputs.par_iter().for_each(|path| {
-        process(path, "mult-output-images", "gray", |image| image.grayscale()).unwrap()
+        process(path, "mult-output-images", "gray", |image| {
+            image.grayscale()
+        })
+        .unwrap()
     });
 
     Ok(())
@@ -66,7 +71,7 @@ fn async_process_images() -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    // generate_inputs()
+    // generate_inputs(5)
     // seq_process_images()
     mult_process_images()
 }
