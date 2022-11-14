@@ -29,6 +29,7 @@ fn get_inputs() -> Result<Vec<PathBuf>> {
     Ok(inputs)
 }
 
+#[inline]
 pub fn clear_outputs(output_path: &str) -> Result<()> {
     let outputs = fs::read_dir(output_path)?;
 
@@ -53,22 +54,24 @@ where
     Ok(())
 }
 
-pub fn seq_process_images() -> Result<()> {
+#[inline]
+pub fn seq_process_images(blur_sigma: f32) -> Result<()> {
     let inputs = get_inputs()?;
 
     inputs.iter().for_each(|path| {
-        process(path, "seq-output-images", "gray", |image| image.grayscale()).unwrap()
+        process(path, "seq-output-images", "blur", |image| image.blur(blur_sigma)).unwrap()
     });
 
     Ok(())
 }
 
-pub fn mult_process_images() -> Result<()> {
+#[inline]
+pub fn mult_process_images(blur_sigma: f32) -> Result<()> {
     let inputs = get_inputs()?;
 
     inputs.par_iter().for_each(|path| {
-        process(path, "mult-output-images", "gray", |image| {
-            image.grayscale()
+        process(path, "mult-output-images", "blur", |image| {
+            image.blur(blur_sigma)
         })
         .unwrap()
     });
