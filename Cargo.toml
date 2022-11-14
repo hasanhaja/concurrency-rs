@@ -9,3 +9,14 @@ edition = "2021"
 rayon = "1.5.3"
 image = "0.24.3"
 tokio = "1.20.1"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "concurrency_benchmark"
+harness = false
+
+[lib]
+name = "core"
+src = "src/lib.rs"
