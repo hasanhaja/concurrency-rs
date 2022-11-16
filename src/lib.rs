@@ -118,18 +118,23 @@ pub fn mult_process_images(blur_sigma: f32) -> Result<()> {
 
 // https://stackoverflow.com/questions/63434977/how-can-i-spawn-asynchronous-methods-in-a-loop
 #[inline]
-pub fn async_process_images(blur_sigma: &'static f32) -> Result<()> {
+pub async fn async_process_images(blur_sigma: &'static f32) -> Result<()> {
     let inputs = get_inputs()?;
-    println!("Here!");
-    inputs
+    
+    let tasks: Vec<_> = inputs
         .into_iter()
-        .for_each(|path| {
+        .map(|path| {
             tokio::spawn(async move {
                 async_process(path, "async-output-images", "blur", |image| {
                     image.blur(*blur_sigma)
-                }).await.unwrap();
-            });
-        });
+                }).await.unwrap()
+            })
+        })
+        .collect();
+
+    for task in tasks {
+        task.await?;
+    }
 
     Ok(())
 }
