@@ -9,9 +9,10 @@ edition = "2021"
 rayon = "1.5.3"
 image = "0.24.3"
 tokio = { version = "1.21.2", features = ["full"] }
+futures = "0.3.25"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = { version = "0.4.0", features = ["async_tokio"] }
 
 [[bench]]
 name = "concurrency_benchmark"
