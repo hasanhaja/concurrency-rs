@@ -1,6 +1,6 @@
-use std::{fs, io, path::PathBuf};
-use std::io::{Cursor, Read, Seek, SeekFrom};
 use image::load_from_memory;
+use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::{fs, io, path::PathBuf};
 use tokio::fs::{read, write};
 
 use image::{io::Reader, DynamicImage, ImageOutputFormat};
@@ -58,16 +58,16 @@ where
 }
 
 async fn async_process<F>(image_path: PathBuf, destination: &str, tag: &str, f: F) -> Result<()>
-where 
+where
     F: Fn(DynamicImage) -> DynamicImage,
 {
-   let image_buffer = read(&image_path).await?;  
-   let image = load_from_memory(&image_buffer).unwrap();
-   let filename = image_path.file_name().unwrap().to_str().unwrap();
+    let image_buffer = read(&image_path).await?;
+    let image = load_from_memory(&image_buffer).unwrap();
+    let filename = image_path.file_name().unwrap().to_str().unwrap();
 
-   let image = f(image);
+    let image = f(image);
 
-   let buffer = to_buffer(image);
+    let buffer = to_buffer(image);
 
     write(format!("{}/{}-{}", destination, tag, filename), buffer).await?;
 
@@ -77,17 +77,17 @@ where
 // source: https://github.com/peerigon/wasm-image/blob/master/rust-image-wrapper/src/lib.rs
 fn to_buffer(image: DynamicImage) -> Vec<u8> {
     let mut cursor = Cursor::new(Vec::new());
-  
+
     image
-      .write_to(&mut cursor, ImageOutputFormat::Jpeg(80))
-      .unwrap();
-  
+        .write_to(&mut cursor, ImageOutputFormat::Jpeg(80))
+        .unwrap();
+
     cursor.seek(SeekFrom::Start(0)).unwrap();
-  
+
     // Read the "file's" contents into a vector
     let mut buffer = Vec::new();
     cursor.read_to_end(&mut buffer).unwrap();
-  
+
     buffer
 }
 
@@ -96,7 +96,10 @@ pub fn seq_process_images(blur_sigma: f32) -> Result<()> {
     let inputs = get_inputs()?;
 
     inputs.iter().for_each(|path| {
-        process(path, "seq-output-images", "blur", |image| image.blur(blur_sigma)).unwrap()
+        process(path, "seq-output-images", "blur", |image| {
+            image.blur(blur_sigma)
+        })
+        .unwrap()
     });
 
     Ok(())
@@ -120,14 +123,16 @@ pub fn mult_process_images(blur_sigma: f32) -> Result<()> {
 #[inline]
 pub async fn async_process_images(blur_sigma: &'static f32) -> Result<()> {
     let inputs = get_inputs()?;
-    
+
     let tasks: Vec<_> = inputs
         .into_iter()
         .map(|path| {
             tokio::spawn(async move {
                 async_process(path, "async-output-images", "blur", |image| {
                     image.blur(*blur_sigma)
-                }).await.unwrap()
+                })
+                .await
+                .unwrap()
             })
         })
         .collect();
