@@ -1,6 +1,6 @@
 use image::load_from_memory;
 use std::io::{Cursor, Read, Seek, SeekFrom};
-use std::{fs, io, path::PathBuf};
+use std::{fs, io, path::PathBuf, path::Path};
 use tokio::fs::{read, write};
 
 use image::{io::Reader, DynamicImage, ImageOutputFormat};
@@ -10,20 +10,28 @@ use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = ::std::result::Result<T, Error>;
 
-pub fn generate_inputs(inputs: i32) -> Result<()> {
+pub fn generate_inputs(inputs: i32, path: &str) -> Result<()> {
     let image = Reader::open("assets/flowers_original.jpg")?.decode()?;
 
     (0..inputs).into_par_iter().for_each(|n| {
         image
-            .save(format!("input-images/flowers-{}.jpg", n))
+            .save(format!("{}/flowers-{}.jpg", path, n))
             .unwrap();
     });
 
     Ok(())
 }
 
-fn get_inputs() -> Result<Vec<PathBuf>> {
-    let inputs = fs::read_dir("input-images")?;
+pub fn mkdir(path: &str) -> Result<()> {
+    if !Path::new(path).is_dir() {
+        fs::create_dir(path)?;
+    }
+
+    Ok(())
+}
+
+fn get_inputs(path: &str) -> Result<Vec<PathBuf>> {
+    let inputs = fs::read_dir(path)?;
     let inputs = inputs
         .map(|res| res.map(|e| e.path()))
         .filter(|res| res.is_ok() && res.as_ref().unwrap().is_file())
@@ -33,8 +41,8 @@ fn get_inputs() -> Result<Vec<PathBuf>> {
 }
 
 #[inline]
-pub fn clear_outputs(output_path: &str) -> Result<()> {
-    let outputs = fs::read_dir(output_path)?;
+pub fn clear_dir(path: &str) -> Result<()> {
+    let outputs = fs::read_dir(path)?;
 
     for res in outputs {
         fs::remove_file(res?.path())?
@@ -92,11 +100,11 @@ fn to_buffer(image: DynamicImage) -> Vec<u8> {
 }
 
 #[inline]
-pub fn seq_process_images(blur_sigma: f32) -> Result<()> {
-    let inputs = get_inputs()?;
+pub fn seq_process_images(input_path: &str, output_path: &str, blur_sigma: f32) -> Result<()> {
+    let inputs = get_inputs(input_path)?;
 
     inputs.iter().for_each(|path| {
-        process(path, "seq-output-images", "blur", |image| {
+        process(path, output_path, "blur", |image| {
             image.blur(blur_sigma)
         })
         .unwrap()
@@ -106,11 +114,11 @@ pub fn seq_process_images(blur_sigma: f32) -> Result<()> {
 }
 
 #[inline]
-pub fn mult_process_images(blur_sigma: f32) -> Result<()> {
-    let inputs = get_inputs()?;
+pub fn mult_process_images(input_path: &str, output_path: &str, blur_sigma: f32) -> Result<()> {
+    let inputs = get_inputs(input_path)?;
 
     inputs.par_iter().for_each(|path| {
-        process(path, "mult-output-images", "blur", |image| {
+        process(path, output_path, "blur", |image| {
             image.blur(blur_sigma)
         })
         .unwrap()
@@ -121,14 +129,14 @@ pub fn mult_process_images(blur_sigma: f32) -> Result<()> {
 
 // https://stackoverflow.com/questions/63434977/how-can-i-spawn-asynchronous-methods-in-a-loop
 #[inline]
-pub async fn async_process_images(blur_sigma: &'static f32) -> Result<()> {
-    let inputs = get_inputs()?;
+pub async fn async_process_images(input_path: &str, output_path: &'static str, blur_sigma: &'static f32) -> Result<()> {
+    let inputs = get_inputs(input_path)?;
 
     let tasks: Vec<_> = inputs
         .into_iter()
         .map(|path| {
             tokio::spawn(async move {
-                async_process(path, "async-output-images", "blur", |image| {
+                async_process(path, output_path, "blur", |image| {
                     image.blur(*blur_sigma)
                 })
                 .await
